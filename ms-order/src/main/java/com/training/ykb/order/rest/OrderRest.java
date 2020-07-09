@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
 import com.netflix.discovery.EurekaClient;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixProperty;
 import com.test.MyWS;
 import com.test.MyWSService;
 import com.training.ykb.clients.account.CustomerPayment;
@@ -98,6 +100,30 @@ public class OrderRest {
         MyWS myWSPortLoc = m.getMyWSPort();
         return myWSPortLoc.hello("osman");
 
+    }
+
+    private int counter = 0;
+
+    @HystrixCommand(fallbackMethod = "circuitTestFallback",
+                    commandProperties = @HystrixProperty(name = "execution.isolation.thread.timeoutInMilliseconds",
+                                                         value = "500"))
+    @GetMapping("/circuit")
+    public String circuitTest() {
+        this.counter++;
+        if ((this.counter % 3) == 0) {
+            throw new IllegalStateException();
+        }
+        if ((this.counter % 5) == 0) {
+            try {
+                Thread.sleep(2_000);
+            } catch (Exception eLoc) {
+            }
+        }
+        return "Normal exec";
+    }
+
+    public String circuitTestFallback() {
+        return "Normal exec Fallback";
     }
 
     @PostMapping("/queue")
