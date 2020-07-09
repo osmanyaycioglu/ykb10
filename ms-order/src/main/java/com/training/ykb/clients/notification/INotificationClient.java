@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 import com.training.ykb.order.config.MyRestErrorException;
 
-@FeignClient("notification")
+@FeignClient(value = "notification")
 @RequestMapping("/notify")
 public interface INotificationClient {
 
