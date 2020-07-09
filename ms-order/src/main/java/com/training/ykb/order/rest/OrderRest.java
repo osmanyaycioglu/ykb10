@@ -3,6 +3,11 @@ package com.training.ykb.order.rest;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cloud.bus.SpringCloudBusClient;
+import org.springframework.cloud.stream.annotation.Output;
+import org.springframework.context.ApplicationContext;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,6 +28,7 @@ import com.training.ykb.clients.restaurant.IRestaurantClient;
 import com.training.ykb.clients.restaurant.OrderTotal;
 import com.training.ykb.order.config.MyRestErrorException;
 import com.training.ykb.order.models.Order;
+import com.training.ykb.order.remote.event.MyRemoteEvent;
 
 @RestController
 @RequestMapping("/order")
@@ -50,6 +56,14 @@ public class OrderRest {
 
     @Autowired
     private RabbitTemplate      rabt;
+
+    @Autowired
+    private ApplicationContext  context;
+
+    @Autowired
+    @Output(SpringCloudBusClient.OUTPUT)
+    private MessageChannel      cloudBusOutboundChannel;
+
 
     @PostMapping("/fullfill")
     public String fullFill(@Validated @RequestBody final Order orderParam) {
@@ -93,4 +107,17 @@ public class OrderRest {
                                  orderParam);
         return "OK";
     }
+
+    @GetMapping("/event")
+    public String testEvent() {
+        MyRemoteEvent eventLoc = new MyRemoteEvent(this,
+                                                   this.context.getId());
+        eventLoc.setAction(100);
+        eventLoc.setDescString("test Event");
+        this.cloudBusOutboundChannel.send(MessageBuilder.withPayload(eventLoc)
+                                                        .build());
+        this.context.publishEvent(eventLoc);
+        return "OK";
+    }
+
 }
